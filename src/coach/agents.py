@@ -3,6 +3,9 @@ import os
 from strands import Agent
 from strands.models import BedrockModel
 
+from coach.models import Coaching, Evaluation
+from coach.session import CoachAgents
+
 DISCOVERY_HINT = (
     "Set COACH_MODEL_ID to a Bedrock model or inference profile your account "
     "can invoke. List what is available with:\n"
@@ -97,7 +100,9 @@ correct result, not a failure."""
 
 
 def build_interviewer(role: str, experience: str) -> Agent:
-    return Agent(model=bedrock_model(), system_prompt=interviewer_prompt(role, experience))
+    return Agent(
+        model=bedrock_model(), system_prompt=interviewer_prompt(role, experience)
+    )
 
 
 def build_evaluator() -> Agent:
@@ -106,3 +111,41 @@ def build_evaluator() -> Agent:
 
 def build_coach(language: str) -> Agent:
     return Agent(model=bedrock_model(), system_prompt=coach_prompt(language))
+
+
+def live_agents(role: str, experience: str, language: str) -> CoachAgents:
+    model = bedrock_model()
+
+    def agent(system_prompt: str) -> Agent:
+        # A fresh agent per call: an evaluator that remembered the first
+        # attempt would score the retry against it, and the before/after
+        # number is the whole claim.
+        return Agent(model=model, system_prompt=system_prompt)
+
+    def next_question(asked: list[str]) -> str:
+        if asked:
+            already = "\n".join(f"- {q}" for q in asked)
+            prompt = f"Questions already asked:\n{already}\n\nAsk the next one."
+        else:
+            prompt = "Ask the first question."
+        return str(agent(interviewer_prompt(role, experience))(prompt)).strip()
+
+    def evaluate(question: str, answer: str) -> Evaluation:
+        return agent(evaluator_prompt()).structured_output(
+            Evaluation,
+            f"Interview question:\n{question}\n\nCandidate's answer:\n{answer}",
+        )
+
+    def coach(question: str, answer: str, evaluation: Evaluation) -> Coaching:
+        return agent(coach_prompt(language)).structured_output(
+            Coaching,
+            f"Interview question:\n{question}\n\n"
+            f"Candidate's answer:\n{answer}\n\n"
+            f"Scores - structure {evaluation.content.structure}, "
+            f"specificity {evaluation.content.specificity}, "
+            f"ownership {evaluation.content.ownership}, "
+            f"english {evaluation.english}.\n"
+            f"Evidence quoted by the scorer: {evaluation.evidence}",
+        )
+
+    return CoachAgents(next_question=next_question, evaluate=evaluate, coach=coach)
