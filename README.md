@@ -1,4 +1,6 @@
-# First Language Interview Coach
+# Own Words
+
+**An interview coach that never puts words in your mouth.**
 
 A mock interview coach for people who lose jobs they could do because of how they
 *sound* in an interview, not what they can do.

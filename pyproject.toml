@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "coach"
+name = "own-words"
 version = "0.1.0"
-description = "A mock interview coach that scores content and English separately and explains the critique in your first language"
+description = "An interview coach that never puts words in your mouth: scores content and English separately, explains the critique in your first language, and proves you improved"
 requires-python = ">=3.11"
 dependencies = [
     "strands-agents",
