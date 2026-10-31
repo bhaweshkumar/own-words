@@ -78,6 +78,24 @@ def test_retry_result_shows_the_before_and_after_on_both_axes():
     assert "5 → 7" in text
 
 
+def test_feedback_quotes_the_candidates_own_words_back():
+    """Spec anti-goal: generic praise. The critique has to show what in their
+    own answer earned the score."""
+    evaluation = Evaluation(
+        content=ContentScore(structure=2, specificity=3, ownership=6),
+        english=5,
+        evidence=["customer bahut gussa tha", "I said sorry"],
+    )
+    text = _render(render_feedback, evaluation, _coaching())
+    assert "customer bahut gussa tha" in text
+    assert "I said sorry" in text
+
+
+def test_retry_result_marks_a_genuine_improvement():
+    text = _render(render_retry, _evaluation(2, 3, 6, 5), _evaluation(8, 8, 8, 7))
+    assert "improved" in text.lower()
+
+
 def test_retry_result_does_not_congratulate_a_score_that_fell():
     text = _render(render_retry, _evaluation(8, 8, 8, 8), _evaluation(4, 4, 4, 4))
     assert "8 → 4" in text

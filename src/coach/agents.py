@@ -99,18 +99,23 @@ they would be caught telling it. A model answer that is mostly brackets is a
 correct result, not a failure."""
 
 
+def _agent(model, system_prompt: str) -> Agent:
+    # callback_handler=None stops the SDK streaming its own output over the
+    # session display. Every agent in this module goes through here so no
+    # builder can quietly reintroduce that.
+    return Agent(model=model, system_prompt=system_prompt, callback_handler=None)
+
+
 def build_interviewer(role: str, experience: str) -> Agent:
-    return Agent(
-        model=bedrock_model(), system_prompt=interviewer_prompt(role, experience)
-    )
+    return _agent(bedrock_model(), interviewer_prompt(role, experience))
 
 
 def build_evaluator() -> Agent:
-    return Agent(model=bedrock_model(), system_prompt=evaluator_prompt())
+    return _agent(bedrock_model(), evaluator_prompt())
 
 
 def build_coach(language: str) -> Agent:
-    return Agent(model=bedrock_model(), system_prompt=coach_prompt(language))
+    return _agent(bedrock_model(), coach_prompt(language))
 
 
 def live_agents(role: str, experience: str, language: str) -> CoachAgents:
@@ -119,11 +124,8 @@ def live_agents(role: str, experience: str, language: str) -> CoachAgents:
     def agent(system_prompt: str) -> Agent:
         # A fresh agent per call: an evaluator that remembered the first
         # attempt would score the retry against it, and the before/after
-        # number is the whole claim. callback_handler=None stops the SDK
-        # streaming its own output over the session display.
-        return Agent(
-            model=model, system_prompt=system_prompt, callback_handler=None
-        )
+        # number is the whole claim.
+        return _agent(model, system_prompt)
 
     def next_question(asked: list[str]) -> str:
         if asked:

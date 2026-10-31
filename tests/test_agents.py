@@ -64,6 +64,55 @@ def test_live_agents_silence_the_sdk_so_it_cannot_print_over_the_interface(monke
         assert kwargs["callback_handler"] is None
 
 
+def test_every_evaluation_gets_a_fresh_agent_so_the_retry_cannot_be_anchored(
+    monkeypatch,
+):
+    """The whole before/after claim rests on this. A reused evaluator would
+    carry history and score the retry while remembering the first attempt."""
+    import coach.agents as agents_module
+
+    constructed = []
+
+    class SpyAgent:
+        def __init__(self, **kwargs):
+            constructed.append(kwargs)
+
+        def structured_output(self, _model, _prompt):
+            return None
+
+    monkeypatch.setattr(agents_module, "Agent", SpyAgent)
+    monkeypatch.setattr(agents_module, "bedrock_model", lambda: object())
+
+    agents = agents_module.live_agents("Nurse", "Entry level", "Hindi")
+    agents.evaluate("q1", "first attempt")
+    agents.evaluate("q1", "the retry")
+
+    assert len(constructed) == 2, "the evaluator agent was reused across attempts"
+    assert all("messages" not in kwargs for kwargs in constructed)
+
+
+def test_the_public_agent_builders_also_silence_the_sdk(monkeypatch):
+    """They must not diverge from live_agents and reintroduce the stdout leak."""
+    import coach.agents as agents_module
+
+    constructed = []
+
+    class SpyAgent:
+        def __init__(self, **kwargs):
+            constructed.append(kwargs)
+
+    monkeypatch.setattr(agents_module, "Agent", SpyAgent)
+    monkeypatch.setattr(agents_module, "bedrock_model", lambda: object())
+
+    agents_module.build_interviewer("Nurse", "Entry level")
+    agents_module.build_evaluator()
+    agents_module.build_coach("Hindi")
+
+    assert len(constructed) == 3
+    for kwargs in constructed:
+        assert kwargs.get("callback_handler", "missing") is None
+
+
 def test_interviewer_prompt_holds_difficulty_flat_and_names_the_role():
     prompt = interviewer_prompt("Customer support representative", "Entry level")
     assert "Customer support representative" in prompt

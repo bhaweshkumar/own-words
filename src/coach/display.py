@@ -31,6 +31,9 @@ def render_feedback(
     )
     scores.append(f"English {evaluation.english}/10", style="bold")
 
+    for quote in evaluation.evidence:
+        scores.append(f"\n  “{quote}”", style="italic dim")
+
     body = Text()
     body.append(coaching.feedback_native + "\n")
     body.append(f"⤷ (en) {coaching.feedback_english}", style="dim italic")
@@ -61,11 +64,15 @@ def render_retry(console: Console, before: Evaluation, after: Evaluation) -> Non
     english_line = f"{before.english} → {after.english}"
     lift = after.content_total - before.content_total
 
+    english_lift = after.english - before.english
+
     line = Text()
     line.append("Content ", style="bold")
     line.append(content_line, style=_delta_style(lift))
     line.append("   English ", style="bold")
-    line.append(english_line, style=_delta_style(after.english - before.english))
+    line.append(english_line, style=_delta_style(english_lift))
+    if lift > 0 or english_lift > 0:
+        line.append("        ✦ you improved this answer", style="green")
 
     console.print()
     console.print(line)

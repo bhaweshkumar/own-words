@@ -3,7 +3,7 @@ import json
 import pytest
 
 from coach.models import Coaching, ContentScore, Evaluation
-from coach.session import CoachAgents, maybe_save, run_session
+from coach.session import CoachAgents, maybe_save, run_session, unique_path
 
 
 def _evaluation(score):
@@ -139,6 +139,38 @@ def test_focus_areas_name_the_weakest_dimensions_of_the_session():
     report = _run(fake, ["a1", "r1", "a2", "r2", "a3", "r3"])
     assert 1 <= len(report.focus_areas) <= 3
     assert all(isinstance(area, str) and area for area in report.focus_areas)
+
+
+def test_the_retry_prompt_repeats_the_question():
+    """By the retry the question has scrolled off behind two feedback panels.
+    The demo has to show that the retry really is the same question."""
+    prompts = []
+
+    def ask(prompt):
+        prompts.append(prompt)
+        return "an answer"
+
+    fake = FakeAgents()
+    run_session(
+        role="Nurse",
+        experience="Entry level",
+        language="Hindi",
+        ask=ask,
+        agents=fake.as_coach_agents(),
+        questions=1,
+    )
+    assert "q1" in prompts[1]
+
+
+def test_unique_path_does_not_overwrite_an_existing_session(tmp_path):
+    path = tmp_path / "session.json"
+    assert unique_path(path) == path
+
+    path.write_text("first session")
+    second = unique_path(path)
+    assert second != path
+    assert not second.exists()
+    assert path.read_text() == "first session"
 
 
 def test_maybe_save_writes_only_on_an_affirmative_answer(tmp_path):

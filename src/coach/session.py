@@ -55,7 +55,9 @@ def run_session(
             coaching = agents.coach(question, first_answer, first_eval)
             _notify(observer, "on_feedback", first_eval, coaching)
 
-            retry_answer = _ask_until_answered(ask, RETRY_PROMPT)
+            retry_answer = _ask_until_answered(
+                ask, f"{RETRY_PROMPT}\n  {question}\nYour answer"
+            )
             retry_eval = agents.evaluate(question, retry_answer)
             _notify(observer, "on_retry", first_eval, retry_eval)
 
@@ -94,6 +96,19 @@ def focus_areas(rounds: list[Round]) -> list[str]:
     }
     weakest = sorted(means, key=lambda name: means[name])[:3]
     return [FOCUS_ADVICE[name] for name in weakest]
+
+
+def unique_path(path: Path) -> Path:
+    """Never silently overwrite an earlier session - those are the user's own
+    answers, and they only get saved because they asked."""
+    path = Path(path)
+    if not path.exists():
+        return path
+    for n in range(2, 1000):
+        candidate = path.with_name(f"{path.stem}-{n}{path.suffix}")
+        if not candidate.exists():
+            return candidate
+    raise RuntimeError(f"too many saved sessions beside {path}")
 
 
 def maybe_save(report: SessionReport, answer: str, path: Path) -> bool:
