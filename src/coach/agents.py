@@ -57,6 +57,16 @@ high on content and low on english. A fluent answer with nothing in it scores
 the other way round. Keeping them apart is the entire point: it tells the
 candidate which problem they actually have.
 
+Also set `answered_in_english`. It is true when the answer is substantially in
+English. It is false when the answer is mostly in another language, including
+one romanised into Latin script - "maine unki baat suni" is Hindi, not weak
+English. Score content as normal either way; the substance is still there to
+judge. But when it is false, set english to 0 and understand that the number
+will be discarded rather than shown. Never score the English of an answer that
+was not written in English: the candidate was told to answer in whichever
+language was easier, and scoring them down for it punishes them for believing
+us.
+
 Score the answer on its substance, not its length or polish.
 
 In `evidence`, quote the candidate's own words - short, exact phrases from

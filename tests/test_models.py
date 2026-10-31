@@ -124,3 +124,93 @@ def test_every_scored_field_describes_itself_in_the_json_schema():
             assert properties[field].get("description"), (
                 f"{model.__name__}.{field} has no description"
             )
+
+
+def _hindi_evaluation(structure, specificity, ownership):
+    """An answer written in Hindi. There is no English in it to score."""
+    return Evaluation(
+        content=ContentScore(
+            structure=structure, specificity=specificity, ownership=ownership
+        ),
+        english=0,
+        answered_in_english=False,
+        evidence=["maine unki baat suni"],
+    )
+
+
+def test_english_lift_is_withheld_when_an_answer_was_not_in_english():
+    """Observed live: a retry written in Hindi scored English 0, so a session
+    that genuinely improved reported english -3.0. The tool invites answers in
+    the user's own language; it must not then score them as failed English."""
+    r = Round(
+        question="q",
+        first_answer="customer gussa tha, I said sorry",
+        first_eval=_evaluation(2, 2, 2, 6),
+        coaching=Coaching(
+            feedback_native="...", feedback_english="...", model_answer="..."
+        ),
+        retry_answer="Maine pehle unki poori baat suni, phir apology ki.",
+        retry_eval=_hindi_evaluation(8, 8, 8),
+    )
+    assert r.content_lift == 6
+    assert r.english_lift is None
+
+
+def test_average_english_lift_ignores_the_rounds_it_could_not_compare():
+    def english_round(before, after):
+        return Round(
+            question="q",
+            first_answer="a",
+            first_eval=_evaluation(before, before, before, before),
+            coaching=Coaching(
+                feedback_native="x", feedback_english="x", model_answer="x"
+            ),
+            retry_answer="b",
+            retry_eval=_evaluation(after, after, after, after),
+        )
+
+    hindi_round = Round(
+        question="q",
+        first_answer="a",
+        first_eval=_evaluation(2, 2, 2, 6),
+        coaching=Coaching(feedback_native="x", feedback_english="x", model_answer="x"),
+        retry_answer="b",
+        retry_eval=_hindi_evaluation(8, 8, 8),
+    )
+
+    report = SessionReport(
+        role="Customer support representative",
+        language="Hindi",
+        rounds=[english_round(4, 8), hindi_round, english_round(5, 7)],
+        focus_areas=["Give one concrete number"],
+    )
+    # English lifts are 4 and 2; the Hindi round contributes nothing.
+    assert report.average_english_lift == pytest.approx(3.0)
+    # Content is comparable in all three rounds: 4, 6 and 2.
+    assert report.average_content_lift == pytest.approx(4.0)
+
+
+def test_average_english_lift_is_none_when_no_round_can_be_compared():
+    report = SessionReport(
+        role="Customer support representative",
+        language="Hindi",
+        rounds=[
+            Round(
+                question="q",
+                first_answer="a",
+                first_eval=_hindi_evaluation(2, 2, 2),
+                coaching=Coaching(
+                    feedback_native="x", feedback_english="x", model_answer="x"
+                ),
+                retry_answer="b",
+                retry_eval=_hindi_evaluation(8, 8, 8),
+            )
+        ],
+        focus_areas=[],
+    )
+    assert report.average_english_lift is None
+
+
+def test_whether_the_answer_was_in_english_describes_itself_in_the_json_schema():
+    properties = Evaluation.model_json_schema()["properties"]
+    assert properties["answered_in_english"].get("description")

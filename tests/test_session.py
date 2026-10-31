@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from coach.models import Coaching, ContentScore, Evaluation
+from coach.models import Coaching, ContentScore, Evaluation, Round
 from coach.session import CoachAgents, maybe_save, run_session, unique_path
 
 
@@ -192,3 +192,56 @@ def test_maybe_save_treats_anything_other_than_yes_as_no(tmp_path, answer):
     path = tmp_path / "session.json"
     assert maybe_save(report, answer, path) is False
     assert not path.exists()
+
+
+def test_the_retry_prompt_asks_for_english_because_the_interview_will_be_in_english():
+    """The first answer may be in any language - that is the point. The retry
+    is the rehearsal, so it has to be in the language of the real interview."""
+    prompts = []
+
+    def ask(prompt):
+        prompts.append(prompt)
+        return "an answer"
+
+    fake = FakeAgents()
+    run_session(
+        role="Nurse",
+        experience="Entry level",
+        language="Hindi",
+        ask=ask,
+        agents=fake.as_coach_agents(),
+        questions=1,
+    )
+    assert "English" in prompts[1]
+
+
+def test_english_is_never_a_focus_area_when_nothing_was_answered_in_english():
+    """Telling someone to work on English when they were never scored on it
+    is advice drawn from a number that does not exist."""
+    from coach.session import FOCUS_ADVICE, focus_areas
+
+    def hindi_eval(score):
+        return Evaluation(
+            content=ContentScore(
+                structure=score, specificity=score, ownership=score
+            ),
+            english=0,
+            answered_in_english=False,
+            evidence=["maine suni"],
+        )
+
+    rounds = [
+        Round(
+            question="q",
+            first_answer="a",
+            first_eval=hindi_eval(score),
+            coaching=Coaching(
+                feedback_native="x", feedback_english="x", model_answer="x"
+            ),
+            retry_answer="b",
+            retry_eval=hindi_eval(score + 1),
+        )
+        for score in (2, 3, 4)
+    ]
+
+    assert FOCUS_ADVICE["english"] not in focus_areas(rounds)

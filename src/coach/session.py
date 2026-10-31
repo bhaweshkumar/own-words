@@ -5,7 +5,10 @@ from typing import Callable, Protocol
 from coach.models import Coaching, Evaluation, Round, SessionReport
 
 FIRST_ANSWER_PROMPT = "Your answer"
-RETRY_PROMPT = "Now try that same question again"
+RETRY_PROMPT = (
+    "Now try that same question again, in English this time - "
+    "the real interview will be in English, so this is the rehearsal"
+)
 
 FOCUS_ADVICE = {
     "structure": "Set out the situation, what you did, and how it ended - in that order.",
@@ -92,8 +95,12 @@ def focus_areas(rounds: list[Round]) -> list[str]:
         "structure": _mean(e.content.structure for e in firsts),
         "specificity": _mean(e.content.specificity for e in firsts),
         "ownership": _mean(e.content.ownership for e in firsts),
-        "english": _mean(e.english for e in firsts),
     }
+    # English only earns a place if there was English to score. Advice drawn
+    # from a score the evaluator declined to give is advice about nothing.
+    in_english = [e.english for e in firsts if e.answered_in_english]
+    if in_english:
+        means["english"] = _mean(in_english)
     weakest = sorted(means, key=lambda name: means[name])[:3]
     return [FOCUS_ADVICE[name] for name in weakest]
 

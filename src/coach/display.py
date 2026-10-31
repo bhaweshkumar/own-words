@@ -60,22 +60,29 @@ def render_feedback(
 
 
 def render_retry(console: Console, before: Evaluation, after: Evaluation) -> None:
-    content_line = f"{before.content_total} → {after.content_total}"
-    english_line = f"{before.english} → {after.english}"
     lift = after.content_total - before.content_total
-
-    english_lift = after.english - before.english
+    english_lift = _english_lift(before, after)
 
     line = Text()
     line.append("Content ", style="bold")
-    line.append(content_line, style=_delta_style(lift))
+    line.append(f"{before.content_total} → {after.content_total}", style=_delta_style(lift))
     line.append("   English ", style="bold")
-    line.append(english_line, style=_delta_style(english_lift))
-    if lift > 0 or english_lift > 0:
+    if english_lift is None:
+        line.append("not scored", style="dim")
+    else:
+        line.append(f"{before.english} → {after.english}", style=_delta_style(english_lift))
+
+    if lift > 0 and (english_lift is None or english_lift >= 0):
         line.append("        ✦ you improved this answer", style="green")
 
     console.print()
     console.print(line)
+    if english_lift is None:
+        console.print(
+            "  one of these answers was not in English, so there was no English "
+            "to compare",
+            style="dim italic",
+        )
 
 
 def render_report(console: Console, report: SessionReport) -> None:
@@ -84,20 +91,27 @@ def render_report(console: Console, report: SessionReport) -> None:
     table.add_column("Content", justify="center")
     table.add_column("English", justify="center")
     for index, round_ in enumerate(report.rounds, start=1):
+        english = (
+            f"{round_.first_eval.english} → {round_.retry_eval.english}"
+            if round_.english_lift is not None
+            else "—"
+        )
         table.add_row(
             f"Q{index}",
             f"{round_.first_eval.content_total} → {round_.retry_eval.content_total}",
-            f"{round_.first_eval.english} → {round_.retry_eval.english}",
+            english,
         )
 
     console.print()
     console.print(table)
     if report.rounds:
-        console.print(
+        summary = (
             f"Average lift after coaching:  "
-            f"content {report.average_content_lift:+.1f}   "
-            f"english {report.average_english_lift:+.1f}"
+            f"content {report.average_content_lift:+.1f}"
         )
+        if report.average_english_lift is not None:
+            summary += f"   english {report.average_english_lift:+.1f}"
+        console.print(summary)
     console.print()
     console.print(Text("Work on:", style="bold"))
     for area in report.focus_areas:
@@ -122,6 +136,12 @@ class ConsoleObserver:
         self.console.print(
             Text(f"The session stopped early: {error}", style="red")
         )
+
+
+def _english_lift(before: Evaluation, after: Evaluation) -> int | None:
+    if not (before.answered_in_english and after.answered_in_english):
+        return None
+    return after.english - before.english
 
 
 def _delta_style(lift: int) -> str:

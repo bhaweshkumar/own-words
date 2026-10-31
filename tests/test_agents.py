@@ -141,3 +141,10 @@ def test_interviewer_prompt_holds_difficulty_flat_and_names_the_role():
     assert "Customer support representative" in prompt
     assert "Entry level" in prompt
     assert "difficulty" in prompt.lower()
+
+
+def test_evaluator_prompt_tells_the_model_not_to_score_english_that_is_not_there():
+    """Without this the model scores a Hindi answer 0 for English, which reads
+    as a failure rather than as a language choice the tool invited."""
+    prompt = evaluator_prompt().lower()
+    assert "answered_in_english" in prompt

@@ -48,6 +48,17 @@ class Evaluation(_ModelOutput):
         "Required. Score this separately from content: a strong answer in broken "
         "English scores high on content and low here."
     )
+    answered_in_english: bool = Field(
+        default=True,
+        description=(
+            "True if the answer is substantially in English and its English can "
+            "fairly be scored. False if it is mostly in another language, or "
+            "romanised into Latin script from one. Set it to False rather than "
+            "scoring the English low: the candidate was invited to answer in "
+            "whichever language was easier, and a low score would punish them "
+            "for accepting."
+        ),
+    )
     evidence: list[str] = Field(
         description=(
             "Short exact quotes from the candidate's own answer that justify "
@@ -98,7 +109,16 @@ class Round(BaseModel):
         return self.retry_eval.content_total - self.first_eval.content_total
 
     @property
-    def english_lift(self) -> int:
+    def english_lift(self) -> int | None:
+        """None when one of the two answers was not in English.
+
+        Subtracting an unscorable English from a scorable one produces a
+        number that looks like a verdict and is not one.
+        """
+        if not (
+            self.first_eval.answered_in_english and self.retry_eval.answered_in_english
+        ):
+            return None
         return self.retry_eval.english - self.first_eval.english
 
 
@@ -110,13 +130,16 @@ class SessionReport(BaseModel):
 
     @property
     def average_content_lift(self) -> float:
-        return self._average(lambda r: r.content_lift)
+        average = self._average(lambda r: r.content_lift)
+        return 0.0 if average is None else average
 
     @property
-    def average_english_lift(self) -> float:
+    def average_english_lift(self) -> float | None:
+        """None when no round had English on both sides to compare."""
         return self._average(lambda r: r.english_lift)
 
-    def _average(self, lift) -> float:
-        if not self.rounds:
-            return 0.0
-        return sum(lift(r) for r in self.rounds) / len(self.rounds)
+    def _average(self, lift) -> float | None:
+        lifts = [value for value in (lift(r) for r in self.rounds) if value is not None]
+        if not lifts:
+            return None
+        return sum(lifts) / len(lifts)

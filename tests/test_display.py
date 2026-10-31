@@ -135,3 +135,72 @@ def test_the_console_observer_satisfies_the_session_observer_protocol():
     observer = ConsoleObserver(_console())
     for method in ("on_question", "on_feedback", "on_retry", "on_error"):
         assert callable(getattr(observer, method))
+
+
+def _hindi_evaluation(score):
+    return Evaluation(
+        content=ContentScore(structure=score, specificity=score, ownership=score),
+        english=0,
+        answered_in_english=False,
+        evidence=["maine unki baat suni"],
+    )
+
+
+def test_an_english_score_that_could_not_be_compared_is_not_shown_as_a_number():
+    """A Hindi retry scored English 0 reads as a collapse. It is an absence."""
+    text = _render(render_retry, _evaluation(2, 2, 2, 6), _hindi_evaluation(8))
+    assert "2 → 8" in text
+    assert "6 → 0" not in text
+    assert "not scored" in text.lower()
+
+
+def test_the_improvement_mark_is_withheld_when_the_other_axis_fell():
+    """Content up, English down is not 'you improved this answer' - it is a
+    trade, and the user has to see which way."""
+    text = _render(render_retry, _evaluation(2, 2, 2, 8), _evaluation(8, 8, 8, 3))
+    assert "improved" not in text.lower()
+
+
+def test_the_improvement_mark_still_appears_when_english_was_not_comparable():
+    text = _render(render_retry, _evaluation(2, 2, 2, 6), _hindi_evaluation(8))
+    assert "improved" in text.lower()
+
+
+def test_the_report_leaves_the_english_column_blank_for_a_round_it_could_not_compare():
+    hindi_round = Round(
+        question="Tell me about a difficult customer.",
+        first_answer="a",
+        first_eval=_evaluation(2, 2, 2, 6),
+        coaching=_coaching(),
+        retry_answer="b",
+        retry_eval=_hindi_evaluation(8),
+    )
+    report = SessionReport(
+        role="Customer support representative",
+        language="Hindi",
+        rounds=[hindi_round],
+        focus_areas=["Give one concrete number"],
+    )
+    text = _render(render_report, report)
+    assert "2 → 8" in text
+    assert "6 → 0" not in text
+
+
+def test_the_report_omits_the_average_english_lift_when_there_is_none_to_report():
+    hindi_round = Round(
+        question="q",
+        first_answer="a",
+        first_eval=_hindi_evaluation(2),
+        coaching=_coaching(),
+        retry_answer="b",
+        retry_eval=_hindi_evaluation(8),
+    )
+    report = SessionReport(
+        role="Customer support representative",
+        language="Hindi",
+        rounds=[hindi_round],
+        focus_areas=[],
+    )
+    text = _render(render_report, report)
+    assert "content +6.0" in text
+    assert "english" not in text.lower().split("content")[-1]

@@ -20,6 +20,13 @@ This agent does two things a general-purpose chatbot does not:
    again* and it is scored again. The before and after are on identical input, so the
    improvement is attributable to the coaching rather than to an easier question.
 
+Answer the first time in whatever language is easiest — English, your own, or a mix.
+The retry is the rehearsal, so it asks you for English. If an answer is not in
+English, the English axis reports `—` rather than a low score: you were invited to
+answer in your own language, and scoring that as failed English would punish you for
+accepting the invitation. Content is still scored either way, because the substance
+is there to judge whatever language it arrives in.
+
 It will never put words in your mouth. The model answer it builds is assembled only
 from facts you actually gave it; anything a strong answer would need but you did not
 supply appears as a bracketed prompt — `[how many days late?]` — for you to fill in.
@@ -49,9 +56,14 @@ Your answer: customer bahut gussa tha about late delivery, I said sorry
 │ ⤷ anything in [brackets] is yours to fill in — it was not invented      │
 ╰─────────────────────────────────────────────────────────────────────────╯
 
-Now try that same question again: ...
+Now try that same question again, in English this time - the real interview
+will be in English, so this is the rehearsal
+  Tell me about a time a customer was angry with you. What did you do?
+Your answer: A customer called because his order was four days late. I
+             listened to his full complaint without interrupting, then...
 
-Content 4 → 8   English 5 → 7
+Content 4 → 7   English not scored   ✦ you improved this answer
+  one of these answers was not in English, so there was no English to compare
 ```
 
 ## Prerequisites
@@ -96,7 +108,7 @@ Three specialist agents, each built with the [Strands Agents SDK](https://github
 | Agent | Job | Hard constraint |
 |---|---|---|
 | Interviewer | Asks one role-specific question at a time | Never repeats a theme; holds difficulty flat so scores stay comparable across the session |
-| Evaluator | Scores structure, specificity, ownership and English 0–10 | Must quote the candidate's own words as evidence; never blends content with English |
+| Evaluator | Scores structure, specificity, ownership and English 0–10 | Must quote the candidate's own words as evidence; never blends content with English; declines to score English at all on an answer that was not written in English |
 | Coach | Explains the score in the candidate's first language | Model answer uses only facts the candidate supplied; gaps become bracketed prompts |
 
 They are driven by a **deterministic Python loop**, not an orchestrator agent or a
