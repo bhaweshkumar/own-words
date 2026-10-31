@@ -1,0 +1,119 @@
+from rich.console import Console
+
+from coach.display import (
+    ConsoleObserver,
+    render_feedback,
+    render_question,
+    render_report,
+    render_retry,
+)
+from coach.models import Coaching, ContentScore, Evaluation, Round, SessionReport
+
+
+def _console():
+    return Console(record=True, width=80, force_terminal=False)
+
+
+def _evaluation(structure, specificity, ownership, english):
+    return Evaluation(
+        content=ContentScore(
+            structure=structure, specificity=specificity, ownership=ownership
+        ),
+        english=english,
+        evidence=["I said sorry"],
+    )
+
+
+def _coaching(native="native feedback", english="english feedback", answer="model"):
+    return Coaching(
+        feedback_native=native, feedback_english=english, model_answer=answer
+    )
+
+
+def _render(fn, *args):
+    console = _console()
+    fn(console, *args)
+    return console.export_text()
+
+
+def _round(before, after):
+    return Round(
+        question="Tell me about a difficult customer.",
+        first_answer="a",
+        first_eval=_evaluation(before, before, before, before),
+        coaching=_coaching(),
+        retry_answer="b",
+        retry_eval=_evaluation(after, after, after, after),
+    )
+
+
+def test_feedback_shows_content_and_english_as_separate_scores():
+    text = _render(render_feedback, _evaluation(2, 3, 6, 5), _coaching())
+    assert "Content 4/10" in text
+    assert "English 5/10" in text
+
+
+def test_feedback_shows_the_native_text_and_its_english_back_translation():
+    text = _render(
+        render_feedback,
+        _evaluation(2, 3, 6, 5),
+        _coaching(native="आपने जो किया वह सही था", english="What you did was right"),
+    )
+    assert "आपने जो किया वह सही था" in text
+    assert "What you did was right" in text
+
+
+def test_feedback_shows_the_model_answer_even_when_it_is_only_brackets():
+    text = _render(
+        render_feedback,
+        _evaluation(1, 1, 1, 2),
+        _coaching(answer="[what was the situation?]"),
+    )
+    assert "[what was the situation?]" in text
+
+
+def test_retry_result_shows_the_before_and_after_on_both_axes():
+    text = _render(render_retry, _evaluation(2, 3, 6, 5), _evaluation(8, 8, 8, 7))
+    assert "4 → 8" in text
+    assert "5 → 7" in text
+
+
+def test_retry_result_does_not_congratulate_a_score_that_fell():
+    text = _render(render_retry, _evaluation(8, 8, 8, 8), _evaluation(4, 4, 4, 4))
+    assert "8 → 4" in text
+    assert "improved" not in text.lower()
+
+
+def test_question_shows_its_position_in_the_session():
+    text = _render(render_question, 2, 3, "Tell me about a difficult customer.")
+    assert "2" in text and "3" in text
+    assert "Tell me about a difficult customer." in text
+
+
+def test_report_shows_per_question_rows_and_average_lift():
+    report = SessionReport(
+        role="Customer support representative",
+        language="Hindi",
+        rounds=[_round(4, 8), _round(5, 7), _round(6, 8)],
+        focus_areas=["Use the STAR structure"],
+    )
+    text = _render(render_report, report)
+    assert "Average lift" in text
+    assert "Use the STAR structure" in text
+
+
+def test_devanagari_renders_without_a_unicode_error():
+    report = SessionReport(
+        role="नर्स",
+        language="Hindi",
+        rounds=[_round(4, 8)],
+        focus_areas=["हर जवाब में एक ठोस संख्या दीजिए"],
+    )
+    text = _render(render_report, report)
+    assert "हर जवाब में एक ठोस संख्या दीजिए" in text
+
+
+def test_the_console_observer_satisfies_the_session_observer_protocol():
+    observer = ConsoleObserver(_console())
+    for method in ("on_question", "on_feedback", "on_retry", "on_error"):
+        assert callable(getattr(observer, method))

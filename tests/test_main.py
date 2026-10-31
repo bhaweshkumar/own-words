@@ -1,5 +1,5 @@
-from coach.main import PlainObserver, collect_setup, main
-from coach.models import Coaching, ContentScore, Evaluation
+from coach.main import collect_setup, main
+from coach.models import SessionReport
 
 
 def scripted(answers):
@@ -9,14 +9,6 @@ def scripted(answers):
         return remaining.pop(0)
 
     return ask
-
-
-def _evaluation(score):
-    return Evaluation(
-        content=ContentScore(structure=score, specificity=score, ownership=score),
-        english=score,
-        evidence=["quoted"],
-    )
 
 
 def test_setup_collects_role_experience_and_language():
@@ -44,27 +36,18 @@ def test_main_reports_a_clear_error_when_the_model_id_is_unset(monkeypatch, caps
     assert "Traceback" not in captured.err
 
 
-def test_a_model_answer_that_is_entirely_brackets_is_still_printed(capsys):
-    coaching = Coaching(
-        feedback_native="native",
-        feedback_english="english",
-        model_answer="[what was the situation?] [what did you do?]",
-    )
-    PlainObserver().on_feedback(_evaluation(3), coaching)
-    assert "[what was the situation?]" in capsys.readouterr().out
+def test_main_does_not_write_a_session_file_when_the_session_produced_nothing(
+    monkeypatch, tmp_path
+):
+    """A session that failed on its first Bedrock call must not leave an
+    empty session.json behind, nor ask whether to save one."""
+    import coach.main as main_module
 
+    empty = SessionReport(role="Nurse", language="Hindi", rounds=[], focus_areas=[])
+    monkeypatch.setattr(main_module, "SESSION_PATH", tmp_path / "session.json")
+    monkeypatch.setattr(main_module, "live_agents", lambda *a, **k: object())
+    monkeypatch.setattr(main_module, "run_session", lambda **kwargs: empty)
+    monkeypatch.setattr("builtins.input", lambda *_: "Nurse")
 
-def test_the_plain_observer_shows_content_and_english_as_separate_scores(capsys):
-    PlainObserver().on_feedback(
-        _evaluation(4),
-        Coaching(feedback_native="n", feedback_english="e", model_answer="m"),
-    )
-    out = capsys.readouterr().out
-    assert "Content 4/10" in out
-    assert "English 4/10" in out
-
-
-def test_the_plain_observer_shows_the_retry_delta_on_both_axes(capsys):
-    PlainObserver().on_retry(_evaluation(4), _evaluation(8))
-    out = capsys.readouterr().out
-    assert "4 -> 8" in out
+    assert main([]) == 0
+    assert not (tmp_path / "session.json").exists()
