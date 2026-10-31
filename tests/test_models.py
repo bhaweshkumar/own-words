@@ -79,3 +79,18 @@ def test_average_lifts_over_a_session():
 def test_scores_outside_zero_to_ten_are_rejected():
     with pytest.raises(ValidationError):
         ContentScore(structure=11, specificity=5, ownership=5)
+
+
+def test_every_scored_field_describes_itself_in_the_json_schema():
+    """The schema is the contract the model fills in. An undescribed field
+    is one the model silently omits."""
+    for model, fields in [
+        (ContentScore, ["structure", "specificity", "ownership"]),
+        (Evaluation, ["content", "english", "evidence"]),
+        (Coaching, ["feedback_native", "feedback_english", "model_answer"]),
+    ]:
+        properties = model.model_json_schema()["properties"]
+        for field in fields:
+            assert properties[field].get("description"), (
+                f"{model.__name__}.{field} has no description"
+            )

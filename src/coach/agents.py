@@ -119,8 +119,11 @@ def live_agents(role: str, experience: str, language: str) -> CoachAgents:
     def agent(system_prompt: str) -> Agent:
         # A fresh agent per call: an evaluator that remembered the first
         # attempt would score the retry against it, and the before/after
-        # number is the whole claim.
-        return Agent(model=model, system_prompt=system_prompt)
+        # number is the whole claim. callback_handler=None stops the SDK
+        # streaming its own output over the session display.
+        return Agent(
+            model=model, system_prompt=system_prompt, callback_handler=None
+        )
 
     def next_question(asked: list[str]) -> str:
         if asked:

@@ -39,6 +39,31 @@ def test_evaluator_prompt_scores_english_separately_from_content():
     assert "never" in prompt and "blend" in prompt
 
 
+def test_live_agents_silence_the_sdk_so_it_cannot_print_over_the_interface(monkeypatch):
+    """Strands agents stream to stdout by default, which duplicates every
+    question and leaks 'Tool #1: Evaluation' into the session display."""
+    import coach.agents as agents_module
+
+    recorded = []
+
+    class SpyAgent:
+        def __init__(self, **kwargs):
+            recorded.append(kwargs)
+
+        def __call__(self, _prompt):
+            return "a question"
+
+    monkeypatch.setattr(agents_module, "Agent", SpyAgent)
+    monkeypatch.setattr(agents_module, "bedrock_model", lambda: object())
+
+    agents_module.live_agents("Nurse", "Entry level", "Hindi").next_question([])
+
+    assert recorded, "no agent was constructed"
+    for kwargs in recorded:
+        assert "callback_handler" in kwargs
+        assert kwargs["callback_handler"] is None
+
+
 def test_interviewer_prompt_holds_difficulty_flat_and_names_the_role():
     prompt = interviewer_prompt("Customer support representative", "Entry level")
     assert "Customer support representative" in prompt

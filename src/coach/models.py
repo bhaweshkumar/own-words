@@ -1,18 +1,39 @@
 from pydantic import BaseModel, Field
 
-Score = Field(ge=0, le=10)
+
+def _score(description: str) -> int:
+    return Field(ge=0, le=10, description=description)
 
 
 class ContentScore(BaseModel):
-    structure: int = Score
-    specificity: int = Score
-    ownership: int = Score
+    structure: int = _score(
+        "0-10. Does the answer give the situation, what the candidate did, and "
+        "how it ended, in an order a listener can follow?"
+    )
+    specificity: int = _score(
+        "0-10. Are there concrete details - numbers, timings, named actions - "
+        "rather than generalities?"
+    )
+    ownership: int = _score(
+        "0-10. Is it clear what THIS person did, as opposed to what the team did?"
+    )
 
 
 class Evaluation(BaseModel):
-    content: ContentScore
-    english: int = Score
-    evidence: list[str]
+    content: ContentScore = Field(
+        description="How good the answer is as an answer, regardless of its English."
+    )
+    english: int = _score(
+        "0-10. The quality of the English itself - grammar, word choice, fluency. "
+        "Required. Score this separately from content: a strong answer in broken "
+        "English scores high on content and low here."
+    )
+    evidence: list[str] = Field(
+        description=(
+            "Short exact quotes from the candidate's own answer that justify "
+            "the scores. Never paraphrase, never quote words they did not write."
+        )
+    )
 
     @property
     def content_total(self) -> int:
@@ -21,9 +42,27 @@ class Evaluation(BaseModel):
 
 
 class Coaching(BaseModel):
-    feedback_native: str
-    feedback_english: str
-    model_answer: str
+    feedback_native: str = Field(
+        description=(
+            "Two to four sentences of coaching, written in the candidate's own "
+            "first language."
+        )
+    )
+    feedback_english: str = Field(
+        description=(
+            "A faithful English back-translation of feedback_native. Do not "
+            "improve or extend it - this exists so the coaching can be checked "
+            "by someone who does not read that language."
+        )
+    )
+    model_answer: str = Field(
+        description=(
+            "The answer in English the candidate could have given, rebuilt from "
+            "their own words. Use only facts they actually gave. Where a strong "
+            "answer needs a specific they did not supply, write a bracketed "
+            "prompt such as [how many days late?] instead of inventing one."
+        )
+    )
 
 
 class Round(BaseModel):
