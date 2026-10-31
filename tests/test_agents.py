@@ -64,6 +64,29 @@ def test_live_agents_silence_the_sdk_so_it_cannot_print_over_the_interface(monke
         assert kwargs["callback_handler"] is None
 
 
+def test_a_malformed_model_response_is_retried_once_before_giving_up():
+    """A session is recorded in one take. One bad structured response should
+    cost a second call, not the round."""
+    from pydantic import ValidationError
+
+    from coach.agents import retry_once
+    from coach.models import ContentScore
+
+    def bad_then_good(calls=[]):
+        calls.append(1)
+        if len(calls) == 1:
+            ContentScore.model_validate({"structure": "not a number"})
+        return "second time lucky"
+
+    assert retry_once(bad_then_good) == "second time lucky"
+
+    def always_bad():
+        ContentScore.model_validate({"structure": "not a number"})
+
+    with pytest.raises(ValidationError):
+        retry_once(always_bad)
+
+
 def test_every_evaluation_gets_a_fresh_agent_so_the_retry_cannot_be_anchored(
     monkeypatch,
 ):

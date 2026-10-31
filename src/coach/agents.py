@@ -1,5 +1,6 @@
 import os
 
+from pydantic import ValidationError
 from strands import Agent
 from strands.models import BedrockModel
 
@@ -99,6 +100,15 @@ they would be caught telling it. A model answer that is mostly brackets is a
 correct result, not a failure."""
 
 
+def retry_once(call):
+    """Structured output occasionally comes back malformed. A session is
+    recorded in one take, so pay for a second call rather than lose the round."""
+    try:
+        return call()
+    except ValidationError:
+        return call()
+
+
 def _agent(model, system_prompt: str) -> Agent:
     # callback_handler=None stops the SDK streaming its own output over the
     # session display. Every agent in this module goes through here so no
@@ -136,21 +146,25 @@ def live_agents(role: str, experience: str, language: str) -> CoachAgents:
         return str(agent(interviewer_prompt(role, experience))(prompt)).strip()
 
     def evaluate(question: str, answer: str) -> Evaluation:
-        return agent(evaluator_prompt()).structured_output(
-            Evaluation,
-            f"Interview question:\n{question}\n\nCandidate's answer:\n{answer}",
+        return retry_once(
+            lambda: agent(evaluator_prompt()).structured_output(
+                Evaluation,
+                f"Interview question:\n{question}\n\nCandidate's answer:\n{answer}",
+            )
         )
 
     def coach(question: str, answer: str, evaluation: Evaluation) -> Coaching:
-        return agent(coach_prompt(language)).structured_output(
-            Coaching,
-            f"Interview question:\n{question}\n\n"
-            f"Candidate's answer:\n{answer}\n\n"
-            f"Scores - structure {evaluation.content.structure}, "
-            f"specificity {evaluation.content.specificity}, "
-            f"ownership {evaluation.content.ownership}, "
-            f"english {evaluation.english}.\n"
-            f"Evidence quoted by the scorer: {evaluation.evidence}",
+        return retry_once(
+            lambda: agent(coach_prompt(language)).structured_output(
+                Coaching,
+                f"Interview question:\n{question}\n\n"
+                f"Candidate's answer:\n{answer}\n\n"
+                f"Scores - structure {evaluation.content.structure}, "
+                f"specificity {evaluation.content.specificity}, "
+                f"ownership {evaluation.content.ownership}, "
+                f"english {evaluation.english}.\n"
+                f"Evidence quoted by the scorer: {evaluation.evidence}",
+            )
         )
 
     return CoachAgents(next_question=next_question, evaluate=evaluate, coach=coach)

@@ -1,11 +1,31 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 def _score(description: str) -> int:
     return Field(ge=0, le=10, description=description)
 
 
-class ContentScore(BaseModel):
+class _ModelOutput(BaseModel):
+    """Base for anything the LLM fills in directly.
+
+    Models occasionally wrap a scalar as {"value": 4} instead of 4. Rejecting
+    that ends the session mid-answer, so unwrap it rather than lose the round.
+    """
+
+    @model_validator(mode="before")
+    @classmethod
+    def _unwrap_value_objects(cls, data):
+        if not isinstance(data, dict):
+            return data
+        return {
+            key: value["value"]
+            if isinstance(value, dict) and set(value) == {"value"}
+            else value
+            for key, value in data.items()
+        }
+
+
+class ContentScore(_ModelOutput):
     structure: int = _score(
         "0-10. Does the answer give the situation, what the candidate did, and "
         "how it ended, in an order a listener can follow?"
@@ -19,7 +39,7 @@ class ContentScore(BaseModel):
     )
 
 
-class Evaluation(BaseModel):
+class Evaluation(_ModelOutput):
     content: ContentScore = Field(
         description="How good the answer is as an answer, regardless of its English."
     )
@@ -41,7 +61,7 @@ class Evaluation(BaseModel):
         return round((c.structure + c.specificity + c.ownership) / 3)
 
 
-class Coaching(BaseModel):
+class Coaching(_ModelOutput):
     feedback_native: str = Field(
         description=(
             "Two to four sentences of coaching, written in the candidate's own "

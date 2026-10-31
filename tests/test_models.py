@@ -81,6 +81,36 @@ def test_scores_outside_zero_to_ten_are_rejected():
         ContentScore(structure=11, specificity=5, ownership=5)
 
 
+def test_a_score_wrapped_in_a_value_object_is_unwrapped():
+    """Observed live: the model sometimes returns {"value": 4} for an integer
+    field, which ends the session mid-recording."""
+    evaluation = Evaluation.model_validate(
+        {
+            "content": {
+                "structure": {"value": 4},
+                "specificity": 3,
+                "ownership": {"value": 6},
+            },
+            "english": {"value": 5},
+            "evidence": ["I said sorry"],
+        }
+    )
+    assert evaluation.content.structure == 4
+    assert evaluation.content.ownership == 6
+    assert evaluation.english == 5
+
+
+def test_coaching_text_wrapped_in_a_value_object_is_unwrapped():
+    coaching = Coaching.model_validate(
+        {
+            "feedback_native": {"value": "आपका उत्तर छोटा है"},
+            "feedback_english": "Your answer is short",
+            "model_answer": "[what happened?]",
+        }
+    )
+    assert coaching.feedback_native == "आपका उत्तर छोटा है"
+
+
 def test_every_scored_field_describes_itself_in_the_json_schema():
     """The schema is the contract the model fills in. An undescribed field
     is one the model silently omits."""
