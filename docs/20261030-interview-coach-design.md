@@ -61,7 +61,7 @@ facts. That reframes the gap as language, not ability — which is the actual in
 - **A chatbot wrapper.** If the architecture is one agent with a long prompt, originality
   and technical execution both collapse. The multi-agent split must be real.
 - **A model answer containing facts the user never said.** The target users are exactly
-  the people who would memorise an invented detail and repeat it in a real interview. Any
+  the people who would memorize an invented detail and repeat it in a real interview. Any
   specific the user did not supply appears as a bracketed prompt — `[how many days late?]`
   — never as a fabricated fact.
 - **A fake improvement curve.** The before/after number must come from a real re-scored
@@ -130,13 +130,13 @@ $ python -m coach
 
   The answer you could have given:
   "A customer called about a delivery that was [how late?].
-   I apologised, [what did you check?], and processed a full
+   I apologized, [what did you check?], and processed a full
    refund. The customer was satisfied."
    ⤷ the bracketed parts are yours to fill in — I won't invent them
 
   ── Try that question again ────────────────────────────────────
   > A customer called about a delivery that was four days late.
-  > I apologised, checked the tracking record to confirm, and
+  > I apologized, checked the tracking record to confirm, and
   > processed a full refund the same day. He was satisfied.
 
   Content 4 → 8   English 5 → 7        ✦ you improved this answer

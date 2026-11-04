@@ -30,41 +30,57 @@ is there to judge whatever language it arrives in.
 It will never put words in your mouth. The model answer it builds is assembled only
 from facts you actually gave it; anything a strong answer would need but you did not
 supply appears as a bracketed prompt — `[how many days late?]` — for you to fill in.
-That matters because a detail invented on your behalf is one you might memorise and
+That matters because a detail invented on your behalf is one you might memorize and
 repeat in a real interview.
 
 ## What a session looks like
 
 ```
 ╭─ Question 1 of 3 ───────────────────────────────────────────────────────╮
-│ Tell me about a time a customer was angry with you. What did you do?    │
+│ Tell me about a time you helped someone who was upset or frustrated.    │
+│ What did you do, and how did the situation end?                         │
 ╰─────────────────────────────────────────────────────────────────────────╯
-
-Your answer: customer bahut gussa tha about late delivery, I said sorry
-             and gave him refund, he was okay after
+Your answer: ek customer bahut gussa tha kyunki uski delivery late thi.
+             maine unki poori baat suni, sorry bola aur refund de diya.
+             baad mein woh theek ho gaye.
 
 ╭─ Feedback ──────────────────────────────────────────────────────────────╮
-│ Content 4/10   structure 2 · specificity 3 · ownership 6                │
-│ English 5/10                                                            │
+│ Content 4/10   structure 4 · specificity 2 · ownership 7                │
+│ English —   not in English, so not scored                               │
+│   “ek customer bahut gussa tha kyunki uski delivery late thi”           │
+│   “maine unki poori baat suni, sorry bola aur refund de diya”           │
+│   “baad mein woh theek ho gaye”                                         │
 ╰─────────────────────────────────────────────────────────────────────────╯
-आपका उत्तर सही दिशा में है लेकिन बहुत छोटा है...
-⤷ (en) Your answer is in the right direction but very short...
+आपका जवाब सीधा और साफ़ है, और आपने खुद कदम उठाए: ध्यान से सुनना, माफ़ी
+माँगना और रिफंड देना। कमी यह है कि ठोस details नहीं हैं...
+⤷ (en) Your answer is direct and clear, and you took the actions yourself:
+listening carefully, apologizing and giving a refund. What's missing is
+concrete details, such as how late the delivery was...
 
 ╭─ The answer you could have given ───────────────────────────────────────╮
-│ A customer was very upset because of a late delivery [how many days     │
-│ late?]. I apologised and told him [what exactly did you say?]...        │
-│ ⤷ anything in [brackets] is yours to fill in — it was not invented      │
+│ A customer was very angry because their delivery was late [how many     │
+│ days late? what was the order?]. I listened to their whole complaint    │
+│ without interrupting [what did they say they were most upset about?].   │
+│ I apologized and gave them a refund [full or partial? how did you       │
+│ decide to offer it?]. After that, the customer was fine [how did you    │
+│ know? what did they say or do? did they order again?].                  │
+│ ⤷ anything in [brackets] is yours to fill in — it was not invented for  │
+│ you                                                                     │
 ╰─────────────────────────────────────────────────────────────────────────╯
-
 Now try that same question again, in English this time - the real interview
 will be in English, so this is the rehearsal
-  Tell me about a time a customer was angry with you. What did you do?
-Your answer: A customer called because his order was four days late. I
-             listened to his full complaint without interrupting, then...
+Your answer: A customer was angry because his delivery was late. I listened
+             to his whole complaint without interrupting, said sorry, and
+             gave him a refund. After that he calmed down and thanked me.
 
-Content 4 → 7   English not scored   ✦ you improved this answer
+Content 4 → 6   English not scored        ✦ you improved this answer
   one of these answers was not in English, so there was no English to compare
 ```
+
+Excerpted from a real run on Amazon Bedrock (`us.anthropic.claude-sonnet-5-5`):
+rewrapped to fit, the Hindi feedback shortened, and the model's spelling normalized
+to US English. The output is non-deterministic, so your scores and wording will
+differ.
 
 ## Prerequisites
 
@@ -93,10 +109,13 @@ aws bedrock list-inference-profiles --region us-east-1 \
   --output text
 ```
 
+This needs AWS CLI v2; older v1 builds do not have `list-inference-profiles`.
+
 ## Run
 
 ```bash
-export COACH_MODEL_ID=us.anthropic.claude-sonnet-5   # one from the list above
+export AWS_PROFILE=your-profile                       # if you use named profiles or SSO
+export COACH_MODEL_ID=us.anthropic.claude-sonnet-5-5  # or another ID from the list above
 export AWS_REGION=us-east-1
 .venv/bin/python -m coach
 ```
@@ -151,3 +170,7 @@ callables, so the whole flow is exercised with fakes and costs nothing to run.
 
 The [AWS "Strands SDK: Workshop to Ship" hackathon](https://builder.aws.com/), social
 good / education track.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

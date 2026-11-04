@@ -1,6 +1,6 @@
 # Own Words: an interview coach that never puts words in your mouth
 
-**Focus area:** Education · **Built with:** Strands Agents SDK on Amazon Bedrock · **Repo:** https://github.com/bhaweshkumar/own-words
+**Focus area:** Education · **Built with:** Strands Agents SDK on Amazon Bedrock · **Repo:** https://github.com/bhaweshkumar/own-words · **Demo video:** VIDEO_URL_HERE
 
 ---
 
@@ -42,28 +42,39 @@ Before and after are measured on identical input. Whatever the difference is, th
 
 ```
 ╭─ Question 1 of 3 ───────────────────────────────────────────────────────╮
-│ Tell me about a time a customer was angry with you. What did you do?    │
+│ Tell me about a time you helped someone who was upset or frustrated.    │
+│ What did you do, and how did the situation end?                         │
 ╰─────────────────────────────────────────────────────────────────────────╯
-
 Your answer: customer bahut gussa tha about late delivery, I said sorry
              and gave him refund, he was okay after
 
 ╭─ Feedback ──────────────────────────────────────────────────────────────╮
-│ Content 4/10   structure 2 · specificity 3 · ownership 6                │
-│ English 5/10                                                            │
-│   "customer bahut gussa tha"                                            │
-│   "I said sorry"                                                        │
+│ Content 3/10   structure 3 · specificity 2 · ownership 5                │
+│ English 3/10                                                            │
+│   “customer bahut gussa tha about late delivery”                        │
+│   “I said sorry and gave him refund”                                    │
+│   “he was okay after”                                                   │
 ╰─────────────────────────────────────────────────────────────────────────╯
-आपका उत्तर सही दिशा में है लेकिन बहुत छोटा है...
-⤷ (en) Your answer is in the right direction but very short...
+आपने सीधा और साफ़ जवाब दिया, और अपनी भूमिका भी अच्छे से बताई — माफ़ी माँगी
+और रिफ़ंड दिया। कमी यह है कि जवाब बहुत छोटा है...
+⤷ (en) You gave a direct, clear answer and described your role well: you
+apologized and gave a refund. What's missing is detail, because the answer
+is very short...
 
-Now try that same question again, in English this time — the real
+Now try that same question again, in English this time - the real
 interview will be in English, so this is the rehearsal
+Your answer: A customer called because his order was four days late and
+             he was very angry. I listened to his full complaint without
+             interrupting, apologized, and checked the tracking myself...
 
-Content 4 → 7   English 5 → 9      ✦ you improved this answer
+Content 3 → 7   English 3 → 9        ✦ you improved this answer
 ```
 
-Across the live sessions I've run against Bedrock, coached retries average **+4 on content** and **+2.5 on English**, on identical questions. That number is small, honest, and reproducible — you can run it yourself and get your own.
+*Excerpted from a live run on Amazon Bedrock, rewrapped to fit.*
+
+Notice what the retry is allowed to contain. "Four days late" and "checked the tracking myself" are in the second answer because the *candidate* typed them — the coach only asked for them.
+
+How much does coaching help? I don't have an honest number for that yet. In my own runs the retry scored higher every time, but I wrote those retries knowing exactly what the coach wanted, so that shows the loop works — not that it helps a real candidate. The tool doesn't need my number anyway: it measures each user's own before and after, on their own answers, which is the only number that matters to them.
 
 ## It will not invent your experience
 
@@ -73,13 +84,19 @@ Where a strong answer needs a specific the candidate didn't give, the agent writ
 
 ```
 ╭─ The answer you could have given ───────────────────────────────────────╮
-│ A customer was very upset because of a late delivery [how many days     │
-│ late?]. I apologised and told him [what exactly did you say?]...        │
-│ ⤷ anything in [brackets] is yours to fill in — it was not invented      │
+│ I was working as [what was your role?] when a customer got very angry   │
+│ because his delivery was late. [How many days late was it? What did he  │
+│ say or do?] I [what did you do first, for example listen to him or      │
+│ check the order?], and I apologized to him. Then I gave him a refund    │
+│ [did you need approval, or was it your decision?]. After that, he was   │
+│ okay. [What did he say or do at the end? Did he order again or thank    │
+│ you?]                                                                   │
+│ ⤷ anything in [brackets] is yours to fill in — it was not invented for  │
+│ you                                                                     │
 ╰─────────────────────────────────────────────────────────────────────────╯
 ```
 
-My own first draft of this prompt produced a model answer containing "four days late" and "I checked the tracking record." The candidate had said neither. For this audience that is not a harmless flourish — it is a detail someone memorises, repeats in a real interview, and gets caught on. A model answer that is almost entirely brackets is a *correct* result, not a failure.
+My own first draft of this prompt produced a model answer containing "four days late" and "I checked the tracking record." The candidate had said neither. For this audience that is not a harmless flourish — it is a detail someone memorizes, repeats in a real interview, and gets caught on. A model answer that is almost entirely brackets is a *correct* result, not a failure.
 
 ## The architecture, and the part that is deliberately boring
 
@@ -99,7 +116,7 @@ The sequence here is fixed — ask, score, coach, retry, re-score — and it is 
 
 That choice paid for itself twice:
 
-- **Every test runs offline.** The loop takes its agents as injected callables, so all 65 tests use fakes. No test makes a network call, nothing costs money to run, and the whole suite finishes in under half a second.
+- **Every test runs offline.** The loop takes its agents as injected callables, so the whole 67-test suite runs on fakes. No test makes a network call, nothing costs money to run, and the whole suite finishes in under half a second.
 - **The before/after is anchoring-proof.** Each call builds a *fresh* agent. A reused evaluator would carry conversation history and score the retry while remembering the first attempt — which is exactly the contamination that would inflate the improvement figure. There's a test asserting two separate agent constructions per round, because the entire claim rests on it.
 
 ## Three things that only showed up live
@@ -108,7 +125,7 @@ That choice paid for itself twice:
 
 **An undescribed schema field is a field the model skips.** My `Evaluation` model had `english: int` with no `description`. The model, handed a JSON schema containing an unexplained integer, simply omitted it — and the session died on a validation error. Every LLM-filled field now carries a description explaining what it is *and why it matters*. Those descriptions are prompt surface, not documentation.
 
-**The evaluator was punishing people for accepting an invitation.** This one is my favourite, because the bug was in my ethics rather than my code. The tool tells users to answer in whatever language is easiest. So a user answered in romanised Hindi — and the evaluator, correctly observing there was almost no English present, scored English 0. The session report then proudly announced `english -3.0`.
+**The evaluator was punishing people for accepting an invitation.** This one is my favorite, because the bug was in my ethics rather than my code. The tool tells users to answer in whatever language is easiest. So a user answered in romanized Hindi — and the evaluator, correctly observing there was almost no English present, scored English 0. The session report then proudly announced `english -3.0`.
 
 The scorer wasn't wrong. The *question* was wrong. "How good is the English in this answer?" is meaningless when the answer isn't in English, and the resulting zero reads as a failure rather than as a language choice the tool itself encouraged.
 
@@ -126,7 +143,7 @@ No account, no server, no telemetry. Answers go to Amazon Bedrock in the user's 
 git clone https://github.com/bhaweshkumar/own-words && cd own-words
 python3 -m venv .venv && .venv/bin/pip install -e .
 
-export COACH_MODEL_ID=us.anthropic.claude-sonnet-4-5-20250929-v1:0
+export COACH_MODEL_ID=us.anthropic.claude-sonnet-5-5   # any Anthropic model your account can invoke
 export AWS_REGION=us-east-1
 .venv/bin/python -m coach
 ```
