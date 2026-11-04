@@ -32,7 +32,7 @@ def collect_setup(ask):
 def main(argv: list[str] | None = None) -> int:
     console = Console()
 
-    console.rule("First Language Interview Coach")
+    console.rule("Own Words · interview coach")
     console.print(
         "Answer in English, in your own language, or a mix — whatever is easier.\n",
         style="dim",

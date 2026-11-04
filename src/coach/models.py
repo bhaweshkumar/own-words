@@ -53,7 +53,7 @@ class Evaluation(_ModelOutput):
         description=(
             "True if the answer is substantially in English and its English can "
             "fairly be scored. False if it is mostly in another language, or "
-            "romanised into Latin script from one. Set it to False rather than "
+            "romanized into Latin script from one. Set it to False rather than "
             "scoring the English low: the candidate was invited to answer in "
             "whichever language was easier, and a low score would punish them "
             "for accepting."

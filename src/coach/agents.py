@@ -59,7 +59,7 @@ candidate which problem they actually have.
 
 Also set `answered_in_english`. It is true when the answer is substantially in
 English. It is false when the answer is mostly in another language, including
-one romanised into Latin script - "maine unki baat suni" is Hindi, not weak
+one romanized into Latin script - "maine unki baat suni" is Hindi, not weak
 English. Score content as normal either way; the substance is still there to
 judge. But when it is false, set english to 0 and understand that the number
 will be discarded rather than shown. Never score the English of an answer that
@@ -104,7 +104,7 @@ would need a specific they did not supply, write a bracketed prompt in its
 place, like [how many days late?] or [what did you check first?], so they can
 fill it in themselves.
 
-This matters because they may memorise this answer and say it in a real
+This matters because they may memorize this answer and say it in a real
 interview. A detail you invented would become a lie told on their behalf, and
 they would be caught telling it. A model answer that is mostly brackets is a
 correct result, not a failure."""
