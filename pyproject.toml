@@ -7,6 +7,7 @@ name = "own-words"
 version = "0.1.0"
 description = "An interview coach that never puts words in your mouth: scores content and English separately, explains the critique in your first language, and proves you improved"
 requires-python = ">=3.11"
+license = { text = "MIT" }
 dependencies = [
     "strands-agents",
     "pydantic",
