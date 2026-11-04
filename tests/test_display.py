@@ -204,3 +204,17 @@ def test_the_report_omits_the_average_english_lift_when_there_is_none_to_report(
     text = _render(render_report, report)
     assert "content +6.0" in text
     assert "english" not in text.lower().split("content")[-1]
+
+
+def test_the_feedback_panel_does_not_show_an_english_score_for_a_non_english_answer():
+    """The candidate was invited to answer in their own language. 'English 0/10'
+    on that answer reads as a failure the tool itself encouraged."""
+    text = _render(render_feedback, _hindi_evaluation(5), _coaching())
+    assert "English 0/10" not in text
+    assert "English —" in text
+    assert "not in English" in text
+
+
+def test_the_feedback_panel_still_shows_the_english_score_for_an_english_answer():
+    text = _render(render_feedback, _evaluation(5, 5, 5, 7), _coaching())
+    assert "English 7/10" in text

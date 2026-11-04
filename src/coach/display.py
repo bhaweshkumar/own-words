@@ -29,7 +29,13 @@ def render_feedback(
         f" · ownership {content.ownership}\n",
         style="dim",
     )
-    scores.append(f"English {evaluation.english}/10", style="bold")
+    if evaluation.answered_in_english:
+        scores.append(f"English {evaluation.english}/10", style="bold")
+    else:
+        # The candidate was invited to answer in their own language; a number
+        # here would read as failed English rather than as that choice.
+        scores.append("English —", style="bold")
+        scores.append("   not in English, so not scored", style="dim")
 
     for quote in evaluation.evidence:
         scores.append(f"\n  “{quote}”", style="italic dim")
