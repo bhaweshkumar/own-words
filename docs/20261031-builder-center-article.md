@@ -6,7 +6,7 @@
 
 ## The problem is not that they can't do the job
 
-A nurse with eight years of ward experience loses a job to someone with two, because in the interview she said "patient was very angry, I called doctor" instead of "the patient escalated, so I paged the attending and stayed with the family until he arrived."
+Picture a nurse with eight years of ward experience losing a job to someone with two, because in the interview she said "patient was very angry, I called doctor" instead of "the patient escalated, so I paged the attending and stayed with the family until he arrived."
 
 Same facts. Same competence. Different polish.
 
@@ -70,7 +70,7 @@ Your answer: A customer called because his order was four days late and
 Content 3 → 7   English 3 → 9        ✦ you improved this answer
 ```
 
-*Excerpted from a live run on Amazon Bedrock, rewrapped to fit.*
+*Excerpted from a live run on Amazon Bedrock: rewrapped to fit, with the model's spelling normalized to US English. The output is non-deterministic — in another run the same mixed answer was judged "not in English" and its English score showed a dash instead.*
 
 Notice what the retry is allowed to contain. "Four days late" and "checked the tracking myself" are in the second answer because the *candidate* typed them — the coach only asked for them.
 
@@ -96,6 +96,8 @@ Where a strong answer needs a specific the candidate didn't give, the agent writ
 ╰─────────────────────────────────────────────────────────────────────────╯
 ```
 
+*From the same live run as above.*
+
 My own first draft of this prompt produced a model answer containing "four days late" and "I checked the tracking record." The candidate had said neither. For this audience that is not a harmless flourish — it is a detail someone memorizes, repeats in a real interview, and gets caught on. A model answer that is almost entirely brackets is a *correct* result, not a failure.
 
 ## The architecture, and the part that is deliberately boring
@@ -108,7 +110,7 @@ Three specialist Strands agents:
 | **Evaluator** | Scores structure, specificity, ownership, English | Must quote the candidate's own words as evidence; never blends the two axes |
 | **Coach** | Explains the score in the candidate's first language | Model answer uses only supplied facts; gaps become bracketed prompts |
 
-Each is a `strands.Agent` over a shared `BedrockModel`, using `agent.structured_output(PydanticModel, prompt)` so scores come back as validated types rather than prose I have to parse.
+Each is a `strands.Agent` over a shared `BedrockModel`. The evaluator and coach use `agent.structured_output(PydanticModel, prompt)`, so scores and coaching come back as validated types rather than prose I have to parse; the interviewer just returns the question as text.
 
 The workshop this hackathon is built around ends at multi-agent swarms, so the obvious move was to put an orchestrator agent on top. **I deliberately didn't.**
 
@@ -125,7 +127,7 @@ That choice paid for itself twice:
 
 **An undescribed schema field is a field the model skips.** My `Evaluation` model had `english: int` with no `description`. The model, handed a JSON schema containing an unexplained integer, simply omitted it — and the session died on a validation error. Every LLM-filled field now carries a description explaining what it is *and why it matters*. Those descriptions are prompt surface, not documentation.
 
-**The evaluator was punishing people for accepting an invitation.** This one is my favorite, because the bug was in my ethics rather than my code. The tool tells users to answer in whatever language is easiest. So a user answered in romanized Hindi — and the evaluator, correctly observing there was almost no English present, scored English 0. The session report then proudly announced `english -3.0`.
+**The evaluator was punishing people for accepting an invitation.** This one is my favorite, because the bug was in my ethics rather than my code. The tool tells users to answer in whatever language is easiest. In one of my own test sessions I wrote the retries in romanized Hindi — and the evaluator, correctly observing there was almost no English present, scored English 0. The session report then proudly announced `english -3.0`.
 
 The scorer wasn't wrong. The *question* was wrong. "How good is the English in this answer?" is meaningless when the answer isn't in English, and the resulting zero reads as a failure rather than as a language choice the tool itself encouraged.
 
